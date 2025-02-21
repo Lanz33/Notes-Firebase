@@ -1,0 +1,14 @@
+{
+  "targets": {
+    "da-notes-88476": {
+      "hosting": {
+        "danotes": [
+          "da-notes-88476"
+        ]
+      }
+    }
+  },
+  "projects": {
+    "default": "da-notes-88476"
+  }
+}
