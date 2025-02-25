@@ -1,6 +1,7 @@
 import { inject, Injectable, OnDestroy } from '@angular/core';
-import { Firestore, collection, doc, collectionData, onSnapshot, addDoc } from '@angular/fire/firestore';
+import { Firestore, collection, doc, collectionData, onSnapshot, addDoc, updateDoc, deleteDoc, limit } from '@angular/fire/firestore';
 import { Note } from '../interfaces/note.interface';
+import { query, where } from '@angular/fire/firestore';
 
 @Injectable({
   providedIn: 'root'
@@ -35,7 +36,9 @@ export class NoteListService {
   }
 
   subNotesList() {
-    return onSnapshot(this.getNotesRef(), (list) => {
+    const q = query(this.getNotesRef(), limit(3));
+    return onSnapshot (q,  (list) => {
+      this.normalNotes = [];
       list.forEach((element) => {
         this.normalNotes.push(this.setNoteObject(element.data(), element.id));
       });
@@ -45,11 +48,11 @@ export class NoteListService {
 
 
   getTrashRef() {
-    return collection(this.firestore, 'Trash');
+    return collection(this.firestore, 'trash');
   }
 
   getNotesRef() {
-    return collection(this.firestore, 'Notes');
+    return collection(this.firestore, 'notes');
   }
 
   getSingleDocRef(colId: string, docId: string) {
@@ -59,17 +62,50 @@ export class NoteListService {
   setNoteObject(obj: any, id: string): Note {
     return {
       id: id || '',
-      type: obj.type || 'note',
+      type: obj.type || 'notes',
       title: obj.title || '',
       content: obj.content || '',
       marked: obj.marked || false
     };
   }
 
-  async addNote(item: Note) {
-    await addDoc(this.getNotesRef(), item).catch(
+  async addNote(item: Note, colId: 'note' | 'trash') {
+    await addDoc(collection(this.firestore, this.getColIdFromNote(item)), item).catch(
       (err) => { console.error(err) }
     ).then((docRef) => { console.log('Note added', docRef?.id) });
- 
+
   };
+
+  async updateNote(note: Note) {
+    if (note.id) {
+      let docRef = this.getSingleDocRef(this.getColIdFromNote(note), note.id);
+      await updateDoc(docRef, this.getCleanJson(note)).catch(
+        (err) => { console.error(err) });
+
+    }
+  }
+
+  getCleanJson(note: Note) {
+    return {
+      type: note.type,
+      title: note.title,
+      content: note.content,
+      marked: note.marked
+    }
+  }
+
+  getColIdFromNote(note: Note){
+    if (note.type === 'note') {
+      return 'notes';
+    } else {
+      return 'trash';
+    }
+  }
+
+  async deleteNote(colId: "notes" | "trash", docId: string) {
+    await deleteDoc(this.getSingleDocRef(colId, docId)).catch(
+      (err) => { console.error(err) }
+    );  
+  }
+
 }
